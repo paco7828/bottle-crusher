@@ -1,0 +1,55 @@
+Double relay module (DLR)
+Arduino (ARD)
+Power supply (PWS)
+MOTOR
+Wiring:
+DLR_GND --- ARD_GND
+DLR_VCC --- ARD_5V
+DLR_IN1 --- ARD_2
+DLR_IN2 --- ARD_3
+______________________________ 
+
+DLR_K1_LEFT ---PWS_POSITIVE + DLR_K2_LEFT
+DLR_K1_MIDDLE --- MOTOR_NEGATIVE
+DLR_K1_RIGHT --- DLR_K2_RIGHT + PWS_NEGATIVE
+DLR_K2_MIDDLE --- MOTOR_POSITIVE
+
+Code (continuous):
+int relay1 = 2;
+int relay2 = 3;
+
+void setup(){
+  pinMode(relay1, OUTPUT);
+  pinMode(relay2, OUTPUT);
+
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, HIGH);
+
+  Serial.begin(9600);
+}
+
+void loop(){
+  // Rotation right
+  digitalWrite(relay1, LOW);
+  digitalWrite(relay2, HIGH);
+  Serial.println("Rotating right");
+  delay(3000);
+
+  // stop motor
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, HIGH);
+  Serial.println("Stopped");
+  delay(2000); 
+
+  // Rotation left
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, LOW);
+  Serial.println("Rotating left");
+  delay(3000);
+
+  // stop motor
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, HIGH);
+  Serial.println("Stopped");
+  delay(2000);
+}

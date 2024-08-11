@@ -1,0 +1,40 @@
+Parts needed:
+-Arduino (ARD)
+-Screen
+-Double Relay Module (DLR)
+-Power Supply (PWS)
+-Linear Actuator (LINAC)
+-6 buttons (OPT1BTN, OPT2BTN, OPT3BTN, OPT4BTN, STARTBTN, EMERGENCYBTN)
+-------------------------------------------------------------------------------
+Screen --> Arduino (ARD)
+
+BL --> 3.3V
+CS --> 10
+DC --> 9
+RES --> 8 
+SDA --> 11
+SCK --> 13
+VCC --> 5.5V
+GND --> GND
+-------------------------------------------------------------------------------
+Double Relay Module (DLR) --> Arduino (ARD)
+
+GND --> GND
+IN1 --> A1
+IN2 --> A2
+VCC --> 5.5V
+-------------------------------------------------------------------------------
+Double Relay Module (DLR) --> Power Supply (PWS) + Linear Actuator (LINAC)
+
+K1LEFT --> PWS_POS + K2LEFT
+K1MIDDLE --> LINAC_GND
+K1RIGHT --> K2RIGHT + PWS_GND
+
+K2LEFT --> K1LEFT
+K2MIDDLE --> LINAC_POS
+K2RIGHT --> K1RIGHT
+-------------------------------------------------------------------------------
+Button --> Arduino (ARD)
+
+BTN_LEFT --> 5.5V
+BTN_RIGHT --> RESISTOR to GND --> 2, 3, 4, 5, 6, 7

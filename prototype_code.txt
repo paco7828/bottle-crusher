@@ -1,0 +1,295 @@
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
+#include <Adafruit_ST7789.h>
+#include <SPI.h>
+
+#define TFT_CS 10
+#define TFT_RST 8
+#define TFT_DC 9
+
+const int optionWidth = 70;
+const int optionHeight = 30;
+const int greenBtn = 2;
+const int blueBtn = 3;
+const int yellowBtn = 4;
+const int redBtn = 5;
+const int startBtn = 6;
+int selectedOption = 0;
+const int relay1 = A1;
+const int relay2 = A2;
+const int emergencyBtn = 7;
+bool emergencyState = false;
+
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+
+int currentSelection = -1;
+bool blinkState = false;
+unsigned long previousMillis = 0;
+const long interval = 500;
+bool blinkingEnabled = true;
+
+enum DisplayState {
+  NORMAL,
+  CRUSHING,
+  RECOVERY,
+  EMERGENCY
+};
+
+DisplayState currentState = NORMAL;
+unsigned long stateStartTime = 0;
+const unsigned long recoveryTime = 5000;
+
+void drawOptions() {
+  // 0.25L
+  if (currentSelection == 0) {
+    if (blinkState) {
+      tft.fillRect(5, 45, optionWidth, optionHeight, ST7735_GREEN);
+      tft.setCursor(13, 52);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("0.25l");
+    } else {
+      tft.fillRect(5, 45, optionWidth, optionHeight, ST7735_BLACK);
+      tft.setCursor(13, 52);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("0.25l");
+    }
+  } else {
+    tft.drawRect(5, 45, optionWidth, optionHeight, ST7735_GREEN);
+    tft.setCursor(13, 52);
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("0.25l");
+  }
+
+  // 0.5L
+  if (currentSelection == 1) {
+    if (blinkState) {
+      tft.fillRect(85, 45, optionWidth, optionHeight, ST7735_BLUE);
+      tft.setCursor(100, 52);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("0.5l");
+    } else {
+      tft.fillRect(85, 45, optionWidth, optionHeight, ST7735_BLACK);
+      tft.setCursor(100, 52);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("0.5l");
+    }
+  } else {
+    tft.drawRect(85, 45, optionWidth, optionHeight, ST7735_BLUE);
+    tft.setCursor(100, 52);
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("0.5l");
+  }
+
+  // 1L
+  if (currentSelection == 2) {
+    if (blinkState) {
+      tft.fillRect(5, 90, optionWidth, optionHeight, ST7735_YELLOW);
+      tft.setCursor(30, 97);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("1l");
+    } else {
+      tft.fillRect(5, 90, optionWidth, optionHeight, ST7735_BLACK);
+      tft.setCursor(30, 97);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("1l");
+    }
+  } else {
+    tft.drawRect(5, 90, optionWidth, optionHeight, ST7735_YELLOW);
+    tft.setCursor(30, 97);
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("1l");
+  }
+
+  // 1.5L
+  if (currentSelection == 3) {
+    if (blinkState) {
+      tft.fillRect(85, 90, optionWidth, optionHeight, ST7735_RED);
+      tft.setCursor(98, 97);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("1.5l");
+    } else {
+      tft.fillRect(85, 90, optionWidth, optionHeight, ST7735_BLACK);
+      tft.setCursor(98, 97);
+      tft.setTextColor(ST7735_WHITE);
+      tft.print("1.5l");
+    }
+  } else {
+    tft.drawRect(85, 90, optionWidth, optionHeight, ST7735_RED);
+    tft.setCursor(98, 97);
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("1.5l");
+  }
+}
+
+void setup() {
+  for (int i = 2; i < 7; i++) {
+    pinMode(i, INPUT);
+  }
+
+  pinMode(relay1, OUTPUT);
+  pinMode(relay2, OUTPUT);
+  pinMode(emergencyBtn, INPUT);
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, HIGH);
+
+  tft.initR(INITR_BLACKTAB);
+  tft.fillScreen(ST7735_BLACK);
+
+  tft.setRotation(1);
+  tft.setTextSize(2);
+  tft.setTextColor(ST7735_WHITE);
+  tft.setCursor(15, 10);
+  tft.print("BOTTLE TYPE");
+  drawOptions();
+}
+
+void updateSelection(int newSelection) {
+  if (newSelection != currentSelection) {
+    currentSelection = newSelection;
+    blinkState = false;
+    tft.fillScreen(ST7735_BLACK);
+    tft.setCursor(15, 10);
+    tft.print("BOTTLE TYPE");
+    drawOptions();
+  }
+}
+
+void drawEmergencySign() {
+  tft.fillTriangle(80, 40, 30, 120, 130, 120, ST7735_RED);
+  tft.fillCircle(80, 108, 7, ST7735_WHITE);
+  tft.fillRoundRect(77, 54, 7, 40, 3, ST7735_WHITE);
+}
+
+void crushing() {
+  blinkingEnabled = false;
+  currentState = CRUSHING;
+  tft.fillScreen(ST7735_BLACK);
+  tft.setCursor(15, 55);
+  tft.print("Crushing...");
+
+  unsigned long startTime = millis();
+
+  while (millis() - startTime < 5000) {
+    forwardMotor();
+    if (digitalRead(emergencyBtn) == HIGH) {
+      stopMotor();
+      currentState = EMERGENCY;
+      drawEmergencySign();
+      return;
+    }
+    delay(100);
+  }
+
+  stopMotor();
+  delay(2000);
+
+  startTime = millis();
+
+  while (millis() - startTime < 5000) {
+    reverseMotor();
+    if (digitalRead(emergencyBtn) == HIGH) {
+      stopMotor();
+      currentState = EMERGENCY;
+      drawEmergencySign();
+      return;
+    }
+    delay(100);
+  }
+
+  stopMotor();
+  currentState = RECOVERY;
+  stateStartTime = millis();
+}
+
+void recoveryState() {
+  tft.setTextColor(ST7735_WHITE);
+  if (millis() - stateStartTime >= recoveryTime) {
+    currentState = NORMAL;
+    tft.fillScreen(ST7735_BLACK);
+    tft.setCursor(15, 10);
+    tft.print("BOTTLE TYPE");
+    drawOptions();
+    blinkingEnabled = true;
+  }
+}
+
+void forwardMotor() {
+  digitalWrite(relay1, LOW);
+  digitalWrite(relay2, HIGH);
+}
+
+void reverseMotor() {
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, LOW);
+}
+
+void stopMotor() {
+  digitalWrite(relay1, HIGH);
+  digitalWrite(relay2, HIGH);
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+
+  if (currentState == CRUSHING && digitalRead(emergencyBtn) == HIGH) {
+    emergencyState = true;
+    stopMotor();
+    currentState = EMERGENCY;
+    drawEmergencySign();
+  } else {
+    emergencyState = false;
+  }
+
+  if (!emergencyState) {
+    switch (currentState) {
+      case NORMAL:
+        if (blinkingEnabled && currentMillis - previousMillis >= interval) {
+          previousMillis = currentMillis;
+          blinkState = !blinkState;
+          drawOptions();
+        }
+
+        if (digitalRead(greenBtn) == HIGH) {
+          updateSelection(0);
+          selectedOption = 1;
+        }
+
+        if (digitalRead(blueBtn) == HIGH) {
+          updateSelection(1);
+          selectedOption = 2;
+        }
+
+        if (digitalRead(yellowBtn) == HIGH) {
+          updateSelection(2);
+          selectedOption = 3;
+        }
+
+        if (digitalRead(redBtn) == HIGH) {
+          updateSelection(3);
+          selectedOption = 4;
+        }
+
+        if (digitalRead(startBtn) == HIGH && selectedOption != 0) {
+          crushing();
+        }
+        break;
+
+      case RECOVERY:
+        recoveryState();
+        break;
+
+      case EMERGENCY:
+        tft.fillScreen(ST7735_BLACK);
+        tft.setCursor(30, 15);
+        tft.setTextColor(ST7735_RED);
+        tft.print("EMERGENCY");
+        drawEmergencySign();
+        delay(5000);
+        tft.fillScreen(ST7735_BLACK);
+        currentState = RECOVERY;
+        break;
+    }
+  }
+
+  delay(50);
+}
